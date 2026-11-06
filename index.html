@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGENDA INTELIGENTE – ORGANIZA TU VIDA Y ALCANZA TUS OBJETIVOS</title>
+  
+  <!-- Favicon Oficial Impulso Digital JR -->
+  <link rel="icon" type="image/png" href="https://i.postimg.cc/JnQXh5bM/impulsodigitaljr-b-icon-180x180.png">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  
+  <!-- React, React-DOM y Babel Standalone -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+  
+  <!-- Lucide Icons UMD -->
+  <script>window.react = window.React;</script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.263.1/dist/umd/lucide-react.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { 
+      Sun, Moon, LayoutDashboard, Target, Calendar, Clock, CheckSquare, 
+      BarChart2, Download, Settings, Plus, Check, Trash2, X, 
+      ChevronRight, Award, Zap, Flame, Compass, Heart, BookOpen, Briefcase, 
+      Sparkles, CheckCircle2, Menu 
+    } = window.LucideReact;
+    const Edit3 = window.LucideReact.PenLine;
+
+    const sGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    const sSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+    const sClear = () => { try { localStorage.clear(); } catch (e) {} };
+
+    const INITIAL_USER = {
+      name: 'Alex',
+      year: 2026,
+      onboarded: false,
+    };
+
+    const INITIAL_GOALS = [
+      {
+        id: 'g-1',
+        title: 'Lanzar mi negocio digital de consultoría',
+        category: 'Profesional',
+        description: 'Definir servicios, sitio web y captar los primeros 5 clientes.',
+        deadline: '2026-06-30',
+        expectedResult: '$5,000 USD/mes de ingresos recurrentes',
+        status: 'en progreso',
+        progress: 45,
+        milestones: [
+          { id: 'm-1', text: 'Q1: Diseñar oferta y portafolio', done: true },
+          { id: 'm-2', text: 'Q2: Crear sitio web y embudo', done: false },
+          { id: 'm-3', text: 'Q3: Campaña de prospección', done: false },
+        ]
+      },
+      {
+        id: 'g-2',
+        title: 'Correr una Maratón 42K',
+        category: 'Salud y bienestar',
+        description: 'Entrenar plan de 16 semanas de carrera progresiva.',
+        deadline: '2026-11-15',
+        expectedResult: 'Cruzar la meta en menos de 4 horas',
+        status: 'en progreso',
+        progress: 30,
+        milestones: [
+          { id: 'm-4', text: 'Q1: Correr 10K en menos de 50m', done: true },
+          { id: 'm-5', text: 'Q2: Mediamaratón 21K', done: false },
+        ]
+      }
+    ];
+
+    const INITIAL_HABITS = [
+      { id: 'h-1', name: 'Leer 20 minutos', category: 'Aprendizaje', frequency: 'Diario', targetWeekly: 7, history: {} },
+      { id: 'h-2', name: 'Hacer ejercicio', category: 'Salud y bienestar', frequency: 'Diario', targetWeekly: 5, history: {} },
+      { id: 'h-3', name: 'Beber 2L de agua', category: 'Salud y bienestar', frequency: 'Diario', targetWeekly: 7, history: {} },
+      { id: 'h-4', name: 'Meditar 10 min', category: 'Personal', frequency: 'Diario', targetWeekly: 5, history: {} }
+    ];
+
+    const INITIAL_TASKS = [
+      { id: 't-1', text: 'Revisar propuesta de diseño para el cliente', priority: 'alta', isTop3: true, completed: false, period: 'Mañana', estimatedTime: '45m' },
+      { id: 't-2', text: 'Sesión de entrenamiento de 8K ritmo sostenido', priority: 'media', isTop3: true, completed: true, period: 'Tarde', estimatedTime: '60m' },
+      { id: 't-3', text: 'Planificar menú semanal saludable', priority: 'baja', isTop3: true, completed: false, period: 'Noche', estimatedTime: '20m' }
+    ];
+
+    const CATEGORIES = ['Personal', 'Profesional', 'Finanzas', 'Salud y bienestar', 'Familia', 'Aprendizaje', 'Otros'];
+
+    function App() {
+      const [darkMode, setDarkMode] = React.useState(() => sGet('agenda_theme') === 'dark');
+      const [user, setUser] = React.useState(() => JSON.parse(sGet('agenda_user')) || INITIAL_USER);
+      const [goals, setGoals] = React.useState(() => JSON.parse(sGet('agenda_goals')) || INITIAL_GOALS);
+      const [habits, setHabits] = React.useState(() => JSON.parse(sGet('agenda_habits')) || INITIAL_HABITS);
+      const [tasks, setTasks] = React.useState(() => JSON.parse(sGet('agenda_tasks')) || INITIAL_TASKS);
+      
+      const [activeTab, setActiveTab] = React.useState('mida');
+      const [sidebarOpen, setSidebarOpen] = React.useState(false);
+      const [showOnboarding, setShowOnboarding] = React.useState(!user.onboarded);
+
+      const [taskModalOpen, setTaskModalOpen] = React.useState(false);
+      const [goalModalOpen, setGoalModalOpen] = React.useState(false);
+      const [habitModalOpen, setHabitModalOpen] = React.useState(false);
+
+      React.useEffect(() => {
+        sSet('agenda_theme', darkMode ? 'dark' : 'light');
+        if (darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [darkMode]);
+
+      React.useEffect(() => { sSet('agenda_user', JSON.stringify(user)); }, [user]);
+      React.useEffect(() => { sSet('agenda_goals', JSON.stringify(goals)); }, [goals]);
+      React.useEffect(() => { sSet('agenda_habits', JSON.stringify(habits)); }, [habits]);
+      React.useEffect(() => { sSet('agenda_tasks', JSON.stringify(tasks)); }, [tasks]);
+
+      const todayStr = React.useMemo(() => new Date().toISOString().split('T')[0], []);
+      const todayFormatted = React.useMemo(() => {
+        return new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      }, []);
+
+      const handleToggleTask = (id) => {
+        setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+      };
+
+      const handleToggleHabitToday = (habitId) => {
+        setHabits(habits.map(h => {
+          if (h.id === habitId) {
+            const history = { ...h.history };
+            history[todayStr] = !history[todayStr];
+            return { ...h, history };
+          }
+          return h;
+        }));
+      };
+
+      const completedTasksCount = tasks.filter(t => t.completed).length;
+      const todayHabitsDoneCount = habits.filter(h => h.history && h.history[todayStr]).length;
+      const taskPercent = tasks.length ? Math.round((completedTasksCount / tasks.length) * 100) : 0;
+      const habitPercent = habits.length ? Math.round((todayHabitsDoneCount / habits.length) * 100) : 0;
+      const combinedPercent = Math.round((taskPercent + habitPercent) / 2);
+
+      const top3Tasks = tasks.filter(t => t.isTop3).slice(0, 3);
+
+      return (
+        <div className={`min-h-screen font-sans transition-colors duration-200 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
+          
+          {/* ONBOARDING MODAL */}
+          {showOnboarding && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+              <div className={`w-full max-w-xl rounded-2xl p-6 md:p-8 shadow-2xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-600/10 text-blue-600 mx-auto mb-4">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-center tracking-tight mb-2">
+                  Bienvenido a tu nueva forma de organizar tu vida
+                </h2>
+                <p className="text-center text-slate-500 dark:text-slate-400 mb-6 text-sm">
+                  Define tus objetivos, organiza tus días, construye mejores hábitos y convierte tus planes en resultados.
+                </p>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  setUser({ ...user, onboarded: true });
+                  setShowOnboarding(false);
+                }} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Tu Nombre</label>
+                    <input
+                      type="text"
+                      required
+                      value={user.name}
+                      onChange={(e) => setUser({ ...user, name: e.target.value })}
+                      className={`w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Año de Planificación</label>
+                    <input
+                      type="number"
+                      required
+                      value={user.year}
+                      onChange={(e) => setUser({ ...user, year: parseInt(e.target.value) || 2026 })}
+                      className={`w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 px-6 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg flex items-center justify-center space-x-2"
+                  >
+                    <span>COMENZAR A ORGANIZAR MI VIDA</span>
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* MAIN LAYOUT */}
+          <div className="flex h-screen overflow-hidden">
+            
+            {/* SIDEBAR */}
+            <aside className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-slate-800 border-r border-slate-700' : 'bg-white border-r border-slate-200'} flex flex-col justify-between`}>
+              <div>
+                <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
+                      <Compass className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h1 className="font-extrabold text-xs tracking-tight text-slate-900 dark:text-white">AGENDA INTELIGENTE</h1>
+                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">{user.year} • PRODUCTIVIDAD</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setSidebarOpen(false)} className="md:hidden text-slate-400">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <nav className="p-3 space-y-1">
+                  {[
+                    { id: 'mida', label: '1. Mi Día', icon: LayoutDashboard },
+                    { id: 'objetivos', label: '2. Objetivos Anuales', icon: Target },
+                    { id: 'mensual', label: '3. Planificación Mensual', icon: Calendar },
+                    { id: 'diaria', label: '4. Agenda Diaria', icon: Clock },
+                    { id: 'habitos', label: '5. Control de Hábitos', icon: Zap },
+                    { id: 'semanal', label: '6. Revisión Semanal', icon: CheckSquare },
+                    { id: 'estadisticas', label: '7. Estadísticas', icon: BarChart2 },
+                    { id: 'exportar', label: '8. Exportar Agenda', icon: Download },
+                    { id: 'config', label: '9. Configuración', icon: Settings }
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                        className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-xs transition ${
+                          isActive 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : darkMode ? 'text-slate-400 hover:bg-slate-700/50' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* FOOTER & THEME TOGGLE */}
+              <div className="p-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold ${darkMode ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
+                >
+                  <span className="flex items-center space-x-2">
+                    {darkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+                    <span>{darkMode ? 'Modo Oscuro' : 'Modo Claro'}</span>
+                  </span>
+                  <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full uppercase">Cambiar</span>
+                </button>
+
+                <div className="text-center pt-1">
+                  <p className="text-[10px] text-slate-400">
+                    © 2026 Impulso Digital JR.<br />Todos los derechos reservados.
+                  </p>
+                </div>
+              </div>
+            </aside>
+
+            {/* MAIN CONTENT AREA */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+              
+              <header className={`h-16 px-6 flex items-center justify-between border-b shrink-0 ${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="flex items-center space-x-3">
+                  <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-slate-500">
+                    <Menu className="w-6 h-6" />
+                  </button>
+                  <h2 className="text-base font-bold capitalize">
+                    {activeTab === 'mida' && 'Panel Principal — Mi Día'}
+                    {activeTab === 'objetivos' && 'Objetivos Anuales'}
+                    {activeTab === 'mensual' && 'Planificación Mensual'}
+                    {activeTab === 'diaria' && 'Agenda Diaria'}
+                    {activeTab === 'habitos' && 'Control de Hábitos'}
+                    {activeTab === 'semanal' && 'Revisión Semanal'}
+                    {activeTab === 'estadisticas' && 'Estadísticas y Progreso'}
+                    {activeTab === 'exportar' && 'Exportar mi Agenda'}
+                    {activeTab === 'config' && 'Configuración de la Agenda'}
+                  </h2>
+                </div>
+
+                <button
+                  onClick={() => setTaskModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Nueva Tarea</span>
+                </button>
+              </header>
+
+              <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+                
+                {/* 1. MI DÍA */}
+                {activeTab === 'mida' && (
+                  <div className="space-y-6">
+                    <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gradient-to-r from-blue-900 to-slate-900 text-white'}`}>
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-400">{todayFormatted}</span>
+                      <h3 className="text-2xl font-black mt-1">¡Hola, {user.name}! 👋</h3>
+                      <p className="text-xs text-slate-300 italic mt-2">
+                        "La disciplina es el puente entre los objetivos y los logros."
+                      </p>
+                    </div>
+
+                    {/* PRIORIDADES TOP 3 */}
+                    <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-center space-x-2 mb-4">
+                        <Flame className="w-5 h-5 text-amber-500" />
+                        <h4 className="font-bold text-xs uppercase tracking-wider">MIS 3 PRIORIDADES DE HOY</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {top3Tasks.length > 0 ? (
+                          top3Tasks.map((task, idx) => (
+                            <div key={task.id} className={`p-4 rounded-xl border flex flex-col justify-between ${task.completed ? 'bg-emerald-500/10 border-emerald-500/30' : darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                              <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                                {idx + 1}
+                              </span>
+                              <p className={`mt-3 text-xs font-semibold ${task.completed ? 'line-through text-slate-400' : ''}`}>
+                                {task.text}
+                              </p>
+                              <button
+                                onClick={() => handleToggleTask(task.id)}
+                                className={`mt-4 w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1 ${task.completed ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'}`}
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>{task.completed ? 'Completada' : 'Marcar Lista'}</span>
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-3 text-center py-4 text-xs text-slate-400">
+                            No has fijado prioridades top 3 hoy. ¡Agrega una nueva tarea marcando la opción Top 3!
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* SUMMARY & HABITS */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Hábitos de Hoy</h4>
+                        <div className="space-y-2">
+                          {habits.map(habit => {
+                            const done = habit.history && habit.history[todayStr];
+                            return (
+                              <div
+                                key={habit.id}
+                                onClick={() => handleToggleHabitToday(habit.id)}
+                                className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer text-xs ${done ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+                              >
+                                <span className="font-medium">{habit.name}</span>
+                                <div className={`w-5 h-5 rounded flex items-center justify-center ${done ? 'bg-emerald-600 text-white' : 'border border-slate-400'}`}>
+                                  {done && <Check className="w-3.5 h-3.5" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className={`p-5 rounded-2xl border flex flex-col items-center justify-center text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Avance Global del Día</h4>
+                        <span className="text-4xl font-black text-blue-600">{combinedPercent}%</span>
+                        <p className="text-xs text-slate-500 mt-2">Basado en tareas y hábitos completados hoy.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. OBJETIVOS ANUALES */}
+                {activeTab === 'objetivos' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-bold">Grandes Objetivos del Año {user.year}</h3>
+                      <button onClick={() => setGoalModalOpen(true)} className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center space-x-1">
+                        <Plus className="w-4 h-4" />
+                        <span>Nuevo Objetivo</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {goals.map(goal => (
+                        <div key={goal.id} className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} space-y-3`}>
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-500/10 text-blue-600">{goal.category}</span>
+                          <h4 className="font-bold text-sm">{goal.title}</h4>
+                          <p className="text-xs text-slate-500">{goal.description}</p>
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div className="bg-blue-600 h-full" style={{ width: `${goal.progress}%` }}></div>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block text-right">{goal.progress}% Completado</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. CONTROL DE HÁBITOS */}
+                {activeTab === 'habitos' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-bold">Control de Hábitos</h3>
+                      <button onClick={() => setHabitModalOpen(true)} className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center space-x-1">
+                        <Plus className="w-4 h-4" />
+                        <span>Nuevo Hábito</span>
+                      </button>
+                    </div>
+
+                    <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                      <div className="space-y-3">
+                        {habits.map(h => (
+                          <div key={h.id} className="flex justify-between items-center p-3 border-b dark:border-slate-700 text-xs">
+                            <span className="font-bold">{h.name}</span>
+                            <span className="text-slate-400">{h.frequency}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 8. EXPORTAR */}
+                {activeTab === 'exportar' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} space-y-3`}>
+                        <h4 className="font-bold text-sm">Opción Notion (CSV)</h4>
+                        <p className="text-xs text-slate-500">Descargar tus datos para importarlos en tablas de Notion.</p>
+                        <button onClick={async () => {
+                          try {
+                            const downloads = await window.claude.use("downloads");
+                            if (!downloads) return;
+                            const csvContent = ["Título,Categoría,Avance"].concat(goals.map(g => `"${g.title}","${g.category}",${g.progress}%`)).join("\n");
+                            await downloads.save({ filename: "agenda_export.csv", data: new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8" }) });
+                          } catch (e) {}
+                        }} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold">
+                          Descargar CSV
+                        </button>
+                      </div>
+
+                      <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} space-y-3`}>
+                        <h4 className="font-bold text-sm">Opción PDF / GoodNotes</h4>
+                        <p className="text-xs text-slate-500">Imprimir o guardar la vista en PDF para anotación en tablet.</p>
+                        <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">
+                          Imprimir / Exportar PDF
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 9. CONFIGURACIÓN */}
+                {activeTab === 'config' && (
+                  <div className={`p-6 rounded-2xl border max-w-md ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} space-y-4`}>
+                    <h3 className="font-bold text-sm">Ajustes generales</h3>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1">Nombre</label>
+                      <input type="text" value={user.name} onChange={(e) => setUser({ ...user, name: e.target.value })} className={`w-full p-2.5 rounded-xl border text-xs ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
+                    </div>
+                    <button onClick={() => {
+                      if (confirm('¿Restablecer datos por defecto?')) {
+                        sClear();
+                        window.location.reload();
+                      }
+                    }} className="px-4 py-2 bg-red-500/10 text-red-600 rounded-xl text-xs font-bold">
+                      Restablecer Datos de Ejemplo
+                    </button>
+                  </div>
+                )}
+
+              </main>
+            </div>
+          </div>
+
+          {/* TASK MODAL */}
+          {taskModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+              <div className={`w-full max-w-md p-6 rounded-2xl shadow-xl ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-bold text-sm">Nueva Tarea</h4>
+                  <button onClick={() => setTaskModalOpen(false)}><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  setTasks([...tasks, {
+                    id: 't-' + Date.now(),
+                    text: formData.get('text'),
+                    priority: formData.get('priority'),
+                    period: 'Mañana',
+                    completed: false,
+                    isTop3: formData.get('isTop3') === 'on'
+                  }]);
+                  setTaskModalOpen(false);
+                }} className="space-y-4">
+                  <input name="text" required placeholder="Descripción de la tarea" className={`w-full p-2.5 rounded-xl border text-xs ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
+                  <select name="priority" className={`w-full p-2.5 rounded-xl border text-xs ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                    <option value="alta">Prioridad Alta</option>
+                    <option value="media">Prioridad Media</option>
+                    <option value="baja">Prioridad Baja</option>
+                  </select>
+                  <label className="flex items-center space-x-2 text-xs">
+                    <input type="checkbox" name="isTop3" />
+                    <span>Marcar como prioridad Top 3 del día</span>
+                  </label>
+                  <button type="submit" className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs">
+                    Guardar Tarea
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
